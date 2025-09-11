@@ -17,7 +17,6 @@ import {
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { Resend } from "resend";
 import { Client } from "@hubspot/api-client";
 
 // Validation utility functions
@@ -105,11 +104,11 @@ export const action = async ({ request }) => {
     return { success: false, errors, message: "Please fix the validation errors" };
   }
 
-  // Helper function for fallback to Prisma + Resend
-  const fallbackToDatabase = async () => {
-    console.log("Falling back to database and email notification");
+  try {
+    // Always save to Supabase database first
+    console.log("Saving to Supabase database");
     
-    // Optional duplicate check
+    // Check for duplicates
     const existing = await prisma.contactForm.findFirst({
       where: { email: email.trim().toLowerCase() },
     });
@@ -120,8 +119,8 @@ export const action = async ({ request }) => {
       };
     }
 
-    // Save to database
-    await prisma.contactForm.create({
+    // Save to Supabase database
+    const savedContact = await prisma.contactForm.create({
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -130,60 +129,34 @@ export const action = async ({ request }) => {
         questions: questions.trim(),
       },
     });
+    console.log("Successfully saved to Supabase:", savedContact.id);
 
-    // Send email notification
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: "abhinav.kavuluru@i95dev.com",
-      subject: "New Contact Form Submission",
-      html: `
-        <h2>New Contact Form Submission</h2>
-        <p><strong>First Name:</strong> ${firstName}</p>
-        <p><strong>Last Name:</strong> ${lastName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-        <p><strong>Questions:</strong></p>
-        <p>${questions}</p>
-      `,
-    });
-
-    return { success: true, message: "Form submitted successfully! Our team will contact you soon." };
-  };
-
-  try {
-    // Try HubSpot first if API key is available
+    // Try HubSpot as additional integration (non-blocking)
     if (process.env.HUBSPOT_API_KEY) {
       try {
         console.log("Attempting to create HubSpot contact");
         const hubspotClient = new Client({ accessToken: process.env.HUBSPOT_API_KEY });
         
-        // Create contact in HubSpot
         const contactProperties = {
           firstname: firstName.trim(),
           lastname: lastName.trim(),
           email: email.trim().toLowerCase(),
           ...(phone && { phone: phone.trim() }),
-          // Store questions in notes field or create a custom property in HubSpot
           hs_content_membership_notes: questions.trim()
         };
 
         await hubspotClient.crm.contacts.basicApi.create({
           properties: contactProperties
         });
-
         console.log("HubSpot contact created successfully");
-        return { success: true, message: "Form submitted successfully! Our team will contact you soon." };
       } catch (hubspotError) {
-        console.error("HubSpot creation failed, falling back to database:", hubspotError);
-        // Fall back to database and email
-        return await fallbackToDatabase();
+        console.error("HubSpot creation failed (non-critical):", hubspotError);
+        // Continue anyway since Supabase save succeeded
       }
-    } else {
-      console.log("No HubSpot API key found, using database fallback");
-      // No HubSpot API key, use database directly
-      return await fallbackToDatabase();
     }
+
+
+    return { success: true, message: "Form submitted successfully! Our team will contact you soon." };
   } catch (error) {
     console.error("Form submission error:", error);
     return { success: false, message: "Failed to submit form. Please try again later." };
