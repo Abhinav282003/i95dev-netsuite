@@ -2,7 +2,7 @@
 
 client_id = "eca0a49cbec5b48483769d3419560d32"
 name = "I95dev NetSuite Integration"
-application_url = "https://rendering-visible-movies-fields.trycloudflare.com"
+application_url = "https://i95dev-netsuite.vercel.app"
 embedded = true
 handle = "i95dev-netsuite-integration-1"
 
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://rendering-visible-movies-fields.trycloudflare.com/auth/callback",
-  "https://rendering-visible-movies-fields.trycloudflare.com/auth/shopify/callback",
-  "https://rendering-visible-movies-fields.trycloudflare.com/api/auth/callback"
+  "https://i95dev-netsuite.vercel.app/auth/callback",
+  "https://i95dev-netsuite.vercel.app/auth/shopify/callback",
+  "https://i95dev-netsuite.vercel.app/api/auth/callback"
 ]
 
 [pos]
