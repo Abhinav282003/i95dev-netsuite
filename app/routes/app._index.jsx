@@ -18,6 +18,220 @@ import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { Client } from "@hubspot/api-client";
+import nodemailer from "nodemailer";
+
+// SMTP Email sending function
+async function sendEmail(firstName, lastName, email, phone, questions) {
+  try {
+    // Create a transporter object using SMTP server details
+    let transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST, // e.g., "smtp.gmail.com", "smtp.mailtrap.io"
+      port: process.env.SMTP_PORT || 587, // Common ports are 587 (TLS) or 465 (SSL)
+      secure: process.env.SMTP_SECURE === 'true', // true for 465 (SSL), false for other ports like 587 (TLS)
+      auth: {
+        user: process.env.SMTP_USER, // Your SMTP username (usually your email address)
+        pass: process.env.SMTP_PASS, // Your SMTP password or app-specific password
+      },
+      // Optional: for self-signed certificates or specific TLS configurations
+      tls: {
+        rejectUnauthorized: false 
+      }
+    });
+
+    // Define the email options
+    let mailOptions = {
+      from: `"${process.env.SMTP_FROM_NAME || 'NetSuite Integration'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`, // Sender address
+      to: email, // Send to the form submitter's email
+      subject: "Thank you for installing i95Dev NetSuite Integration", // Subject line
+      text: `New contact form submission:
+      
+Name: ${firstName} ${lastName}
+Email: ${email}
+Phone: ${phone || 'Not provided'}
+Questions: ${questions}`, // Plain text body
+      html: `
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Thank You - I95dev Netsuite Integration</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Hidden preheader (visible in inbox preview) -->
+  <style>
+    /* A small, safe media query for small screens (most clients support this) */
+    @media only screen and (max-width:480px) {
+      .container { width:100% !important; }
+      .stack { display:block !important; width:100% !important; }
+      .feature-cell { display:block !important; width:100% !important; padding-bottom:12px !important; }
+      .logo { height:48px !important; }
+      .h1 { font-size:22px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
+  <!-- Preheader text : change to a helpful summary -->
+  <div style="display:none; max-height:0px; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#ffffff; opacity:0;">
+    Thank you for choosing i95Dev Connector — your submission is received. Get the installation guide and book a support meeting.
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f8f9fa; width:100%;">
+    <tr>
+      <td align="center">
+        <!-- container -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="container" style="width:600px; max-width:600px; margin:40px 0; background:#ffffff; border-radius:8px; box-shadow:0 2px 20px rgba(0,0,0,0.08); overflow:hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:#2c5aa0; padding:30px 20px; color:#ffffff; text-align:center;">
+              <h1 style="margin:0; font-size:28px; font-weight:700; color:#ffffff; line-height:1.2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+                i95Dev NetSuite Integration
+              </h1>
+              <p style="margin:8px 0 0; font-size:14px; color:#ffffff; opacity:0.95; line-height:1.3;">
+                Streamline commerce–NetSuite workflows with i95Dev Connect for efficiency and growth
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:34px 34px 18px 34px; color:#333333;">
+              <h2 style="margin:0 0 14px 0; font-size:20px; color:#2c5aa0; font-weight:600; text-align:center;">Thank You for Choosing i95Dev Connector</h2>
+
+              <p style="margin:14px 0 0 0; font-size:15px; line-height:1.6; color:#555555; text-align:center;">
+                Our team has received your submission. Please find the installation guide below. If you need support, book a meeting
+                <a href="https://cal.com/nsconnect/30min?overlayCalendar=true" style="color:#2c5aa0; text-decoration:none; font-weight:600;">here</a>.
+              </p>
+
+              <!-- Features grid (table-based, two columns when wide) -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:24px;">
+                <tr>
+                  <!-- feature column left -->
+                  <td class="feature-cell" valign="top" style="padding:12px; width:50%; min-width:260px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="top" style="width:36px;">
+                          <div style="width:28px; height:28px; background:#2c5aa0; border-radius:50%; text-align:center; line-height:28px; color:#ffffff; font-weight:700; font-size:14px;">✓</div>
+                        </td>
+                        <td style="padding-left:12px; vertical-align:middle; color:#666666; font-size:14px;">
+                          <strong style="display:block; color:#333333; font-size:14px;">Keep Customer Information Synced</strong>
+                          Maintain consistent customer data across Shopify and NetSuite automatically
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <!-- feature column right -->
+                  <td class="feature-cell" valign="top" style="padding:12px; width:50%; min-width:260px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="top" style="width:36px;">
+                          <div style="width:28px; height:28px; background:#2c5aa0; border-radius:50%; text-align:center; line-height:28px; color:#ffffff; font-weight:700; font-size:14px;">✓</div>
+                        </td>
+                        <td style="padding-left:12px; vertical-align:middle; color:#666666; font-size:14px;">
+                          <strong style="display:block; color:#333333; font-size:14px;">Automate Order Processing</strong>
+                          Seamless real-time order fulfillment and status updates between systems
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- second row -->
+                <tr>
+                  <td class="feature-cell" valign="top" style="padding:12px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="top" style="width:36px;">
+                          <div style="width:28px; height:28px; background:#2c5aa0; border-radius:50%; text-align:center; line-height:28px; color:#ffffff; font-weight:700; font-size:14px;">✓</div>
+                        </td>
+                        <td style="padding-left:12px; vertical-align:middle; color:#666666; font-size:14px;">
+                          <strong style="display:block; color:#333333; font-size:14px;">Maintain Accurate Stock Levels</strong>
+                          Keep inventory synchronized across Shopify and NetSuite at all times
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+
+                  <td class="feature-cell" valign="top" style="padding:12px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td valign="top" style="width:36px;">
+                          <div style="width:28px; height:28px; background:#2c5aa0; border-radius:50%; text-align:center; line-height:28px; color:#ffffff; font-weight:700; font-size:14px;">✓</div>
+                        </td>
+                        <td style="padding-left:12px; vertical-align:middle; color:#666666; font-size:14px;">
+                          <strong style="display:block; color:#333333; font-size:14px;">Update Product Details Automatically</strong>
+                          Sync pricing, descriptions, and inventory data across all systems
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA buttons -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:20px;">
+                <tr>
+                  <td align="center" style="padding-top:18px; padding-bottom:6px;">
+                    <!-- Light button -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block; margin-right:8px;">
+                      <tr>
+                        <td align="center" style="background:#e0e0e0; border-radius:6px;">
+                          <a href="https://drive.google.com/file/d/10Ugn7mNB0SEu5XBe_feeCSrtVcmkR-Tl/view?usp=sharing" target="_blank" style="display:inline-block; padding:12px 22px; color:#333333; text-decoration:none; font-weight:600; font-size:14px;">
+                            Installation Guide
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Primary button -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block;">
+                      <tr>
+                        <td align="center" style="background:#2c5aa0; border-radius:6px;">
+                          <a href="https://clouduat2.i95-dev.com" target="_blank" style="display:inline-block; padding:12px 22px; color:#ffffff; text-decoration:none; font-weight:600; font-size:14px;">
+                            Get Started
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f8f9fa; padding:18px 20px; border-top:1px solid #e9ecef; color:#666666; font-size:13px; text-align:center;">
+              <div style="font-size:13px; color:#666666;">
+                © 2024 I95Dev. All rights reserved. | Enterprise Integration Solutions
+              </div>
+              <div style="margin-top:8px; font-size:12px; color:#888888;">
+                Passionate about eCommerce &amp; Business Integration
+              </div>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /container -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `, // HTML body
+    };
+
+    // Send the email
+    let info = await transporter.sendMail(mailOptions);
+    console.log("SMTP Email sent successfully: %s", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Error sending SMTP email:", error);
+    return { success: false, error: error.message };
+  }
+}
 
 // Validation utility functions
 function validateEmail(email) {
@@ -155,6 +369,19 @@ export const action = async ({ request }) => {
       }
     }
 
+    // Send SMTP email notification
+    try {
+      console.log("Sending SMTP email notification");
+      const emailResult = await sendEmail(firstName.trim(), lastName.trim(), email.trim(), phone, questions.trim());
+      if (emailResult.success) {
+        console.log("SMTP email sent successfully:", emailResult.messageId);
+      } else {
+        console.error("SMTP email failed (non-critical):", emailResult.error);
+      }
+    } catch (emailError) {
+      console.error("SMTP email error (non-critical):", emailError);
+      // Continue anyway since Supabase save succeeded
+    }
 
     return { success: true, message: "Form submitted successfully! Our team will contact you soon." };
   } catch (error) {
